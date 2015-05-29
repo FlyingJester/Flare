@@ -9,23 +9,58 @@
 
 namespace Flare {
 
+class TabButton : public Fl_Button {
+    static void ReloadCallback(Fl_Widget *w, void *a){
+        Fl_Button *button = static_cast<Fl_Button *>(a);
+        EditorWindow *window = static_cast<EditorWindow *>(button->user_data());
+        unsigned i = window->tab_bar.find(button);
+        switch(fl_choice("Are you sure you want to reload the document?\nYou will lose any unsave changes.", fl_yes, fl_no, nullptr)){
+            case 1: return;
+            case 0: window->getEditor(i)->load();
+        }
+    }
+    static void InfoCallback(Fl_Widget *w, void *a){
+        Fl_Button *button = static_cast<Fl_Button *>(a);
+        EditorWindow *window = static_cast<EditorWindow *>(button->user_data());
+        unsigned i = window->tab_bar.find(button);
+        window->getEditor(i)->info();
+    }
+    static void CloseCallback(Fl_Widget *w, void *a){
+        Fl_Button *button = static_cast<Fl_Button *>(a);
+        EditorWindow *window = static_cast<EditorWindow *>(button->user_data());
+        unsigned i = window->tab_bar.find(button);
+        switch(fl_choice("Save Changes?", fl_cancel, fl_yes, fl_no)){
+            case 0: return;
+            case 1: window->getEditor(i)->save();
+        }
+        window->close(i);
+        Fl::delete_widget(button);
+    }
+public:
+    int handle(int e) override {
+        if((e==FL_PUSH) && (Fl::event_button()==FL_RIGHT_MOUSE)){
+            Fl_Menu_Item rclick_menu[] = {
+                { "Info...", 0, InfoCallback, this},
+                { "Reload", 0, ReloadCallback, this},
+                { "Close",  0, CloseCallback, this},
+                { 0 }
+            };
+            const Fl_Menu_Item *m = rclick_menu->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
+            if(m) m->do_callback(0, m->user_data());
+            return 1;
+        }
+        else if((e==FL_RELEASE) && (Fl::event_button()==FL_RIGHT_MOUSE)){
+            return 1;
+        }
+        else return Fl_Button::handle(e);
+    }
+
+    TabButton(int X, int Y, int W, int H, const char *L = nullptr) : Fl_Button(X, Y, W, H, L){}
+};
+
 const double ScrollRate(){
     return 1.0/100.0;
 }
-
-/*
-std::list<Editor> editors;
-    
-Fl_Window window;
-Fl_Scroll tab_bar;
-Fl_Repeat_Button left_button, right_button;
-    
-bool scroll_again;
-
-unsigned movement_direction; // 1 is left, 2 is right
-    
-static void timer_callback(void *a);
-*/
 
 void EditorWindow::timer_callback(void *a){
     EditorWindow *window = static_cast<EditorWindow *>(a);
@@ -53,6 +88,18 @@ void repeat_button_callback(Fl_Widget *w, void *a){
     }
 }
 
+void EditorWindow::ShowButtonCallback(Fl_Widget *w, void *a){
+    EditorWindow *window = static_cast<EditorWindow *>(a);
+    unsigned i = window->tab_bar.find(w);
+
+    assert(window->children()==window->tab_bar.children());
+    assert(window->children()==window->holder.children());
+
+    assert(i<window->tab_bar.children());
+
+    window->push(i);
+    
+}
 
 void EditorWindow::openFile(const std::string &path){
 
@@ -73,7 +120,7 @@ void EditorWindow::openFile(const std::string &path){
     const std::string extension = std::string(from, to);
 
     const Fl_Widget * const end_button = last_button();
-    Fl_Button * const button = new Fl_Button(0, 0, fl_width(new_path.c_str(), new_path.size())+12, 24);
+    Fl_Button * const button = new TabButton(0, 0, fl_width(new_path.c_str(), new_path.size())+12, 24);
 
     button->copy_label(new_path.c_str());
     
@@ -143,19 +190,6 @@ void EditorWindow::OpenCallback(Fl_Widget *w, void *a){
     for(int i = 0; i<chooser.count(); i++)
         window->openFile(chooser.filename(i));
 
-}
-
-void EditorWindow::ShowButtonCallback(Fl_Widget *w, void *a){
-    EditorWindow *window = static_cast<EditorWindow *>(a);
-    unsigned i = window->tab_bar.find(w);
-
-    assert(window->children()==window->tab_bar.children());
-    assert(window->children()==window->holder.children());
-
-    assert(i<window->tab_bar.children());
-
-    window->push(i);
-    
 }
 
 static const Fl_Menu_Item s_menu[4] = {

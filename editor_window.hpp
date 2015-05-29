@@ -72,7 +72,15 @@ private:
         return tab_bar.child(tab_bar.children()-1);
     }
 
+    inline Editor *getEditor(unsigned i) { return editors[i].get(); };
+    bool close(unsigned i){
+        editors.erase(editors.begin()+i);
+        return true;
+    }
+
 public:
+    
+    friend class TabButton;
     
     EditorWindow();
     ~EditorWindow(){
