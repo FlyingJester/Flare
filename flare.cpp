@@ -5,6 +5,8 @@
 #include <FL/Fl_Menu_Item.H>
 #include <FL/Fl.H>
 
+#include <FL/Enumerations.H>
+
 #include <FL/fl_ask.H>
 
 #include <string>
@@ -170,7 +172,9 @@ int main(int argc, char *argv[]){
     editor.user_data(new struct EditorData);
     editor.textfont(FL_SCREEN);
     editor.buffer(CreateTextBuffer());
+#if FLTK_ABI_VERSION == 10303
     editor.linenumber_width(64);
+#endif
     editor.end();
 
     this_window.resizable(editor);
