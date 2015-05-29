@@ -63,6 +63,10 @@ Editor::Editor(int x, int y, int w, int h)
     editor.buffer(CreateTextBuffer());
     editor.textfont(FL_SCREEN);
 
+#if ( defined(FL_ABI_VERSION) ) &&  ( FL_ABI_VERSION >= 10304 )
+    editor.linenumber_width(64);
+#endif
+
     holder.resizable(editor);
     holder.end();
 }
@@ -76,6 +80,10 @@ Editor::Editor(const Editor &that)
 
     editor.buffer(CreateTextBuffer());
     editor.textfont(FL_SCREEN);
+
+#if ( defined(FL_ABI_VERSION) ) &&  ( FL_ABI_VERSION >= 10304 )
+    editor.linenumber_width(64);
+#endif
 
     holder.resizable(editor);
 
