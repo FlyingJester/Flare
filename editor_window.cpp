@@ -2,6 +2,7 @@
 
 #include <FL/Fl.H>
 #include <FL/Fl_File_Chooser.H>
+#include <FL/Fl_Native_File_Chooser.H>
 
 #include <cstdio>
 #include <cassert>
@@ -60,13 +61,16 @@ void EditorWindow::openFile(const std::string &path){
 
     fl_font(window.labelfont(), window.labelsize());
 
+
+    std::string::const_iterator from = path.cend()--, to = path.cend();
+    while(from!=path.cbegin()) if(*from=='/') {from++; break; } else from--;
+
+    const std::string new_path = std::string(from, to);
+
     const Fl_Widget * const end_button = last_button();
-    Fl_Button * const button = new Fl_Button(0, 0, fl_width(path.c_str(), path.size())+12, 24);
+    Fl_Button * const button = new Fl_Button(0, 0, fl_width(new_path.c_str(), new_path.size())+12, 24);
 
-    std::string::const_iterator from = path.cend(), to = path.cend();
-    while(from!=path.cbegin()) if(*from=='/') break; else from--;
-
-    button->copy_label(std::string(from, to).c_str());
+    button->copy_label(new_path.c_str());
     
     editors.push_back(std::unique_ptr<Editor>(new Editor(
         holder.x(),
@@ -87,12 +91,16 @@ void EditorWindow::openFile(const std::string &path){
 
     assert(editors.size()==tab_bar.children());
     assert(editors.size()==holder.children());
+
+    button->do_callback();
+
 }
 
-void EditorWindow::OpenCallback(Fl_Widget *w, void *a){
+/*
+void NonNativeOpenCallback(Fl_Widget *w, void *a){
     EditorWindow *window = static_cast<EditorWindow *>(a);
 
-    Fl_File_Chooser chooser("./", nullptr, Fl_File_Chooser::MULTI, "Open Files");
+    static Fl_File_Chooser chooser("./", nullptr, Fl_File_Chooser::MULTI, "Open Files");
 
     chooser.show();
 
@@ -108,6 +116,29 @@ void EditorWindow::OpenCallback(Fl_Widget *w, void *a){
     assert(window->editors.size()==window->holder.children());
 
     window->push(window->children()-1, true);
+
+}
+*/
+
+void EditorWindow::OpenCallback(Fl_Widget *w, void *a){
+    EditorWindow *window = static_cast<EditorWindow *>(a);
+
+    Fl_Native_File_Chooser chooser;
+
+    chooser.title("Open Files");
+    chooser.type(Fl_Native_File_Chooser::BROWSE_MULTI_FILE);
+    chooser.options(Fl_Native_File_Chooser::NEW_FOLDER | 
+        Fl_Native_File_Chooser::PREVIEW);
+    
+    int err = chooser.show();
+    if(err==1) return;
+    else if (err==-1){
+        fl_alert("Error choosing a file\n%s", chooser.errmsg());
+        return;
+    }
+
+    for(int i = 0; i<chooser.count(); i++)
+        window->openFile(chooser.filename(i));
 
 }
 
