@@ -67,17 +67,20 @@ void EditorWindow::openFile(const std::string &path){
 
     const std::string new_path = std::string(from, to);
 
+    from = path.cend()--;
+    while(from!=path.cbegin()) if(*from=='.') {from++; break; } else from--;
+
+    const std::string extension = std::string(from, to);
+
     const Fl_Widget * const end_button = last_button();
     Fl_Button * const button = new Fl_Button(0, 0, fl_width(new_path.c_str(), new_path.size())+12, 24);
 
     button->copy_label(new_path.c_str());
     
-    editors.push_back(std::unique_ptr<Editor>(new Editor(
-        holder.x(),
-        holder.y(),
-        holder.w(),
-        holder.h()
-    )));
+    {
+        Editor *e = Editor::GetEditorForExtension(extension)(holder.x(), holder.y(), holder.w(), holder.h());
+        editors.emplace_back(e);
+    }
 
     holder.add(editors.back()->getGroup()),
     tab_bar.add(button);
@@ -213,6 +216,9 @@ EditorWindow::EditorWindow()
 } // namespace Flare
 
 int main(int argc, char *argv[]){
+
+    Flare::Editor::RestoreDefaultEditor();
+
     Flare::EditorWindow window;
 // editor(0, 0, 600, 400);
     

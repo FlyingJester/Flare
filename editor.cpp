@@ -17,258 +17,91 @@
 #include <cstdio>
 #include <cassert>
 
+// Stuff for editor filetype registration
+#include "text_editor.hpp"
+#include <deque>
+
 namespace Flare {
 
-// Shorthand.
-static inline Fl_Text_Buffer *CreateTextBuffer(){ return new Fl_Text_Buffer(0x100, 0x100); }
-
-enum FileSizePrefix {fsp_B, fsp_KB, fsp_MB, fsp_GB, fsp_TB};
-
-static inline FileSizePrefix sizePrefix(unsigned long long i){
-    if(i<1000u) return fsp_B;
-    else if(i<1000000u) return fsp_KB;
-    else if(i<1000000000ull) return fsp_MB;
-    else if(i<1000000000000ull) return fsp_GB;
-    else return fsp_TB; // Unlikely :)
+Editor::~Editor(){
+    
 }
 
-static inline char sizePrefixChar(unsigned long long i){
-    static const char lookup_table_[] = {' ', 'K', 'M', 'G', 'T'};
-    return lookup_table_[sizePrefix(i)];
-}
-
-static inline const char *sizeNumberString(char buffer[8], unsigned long long i){
-    unsigned char at = 0;
-    static const unsigned long long lookup_table_[] = {1u, 100u, 100000u, 100000000ull, 100000000000ull};
-    unsigned long long p = i/lookup_table_[sizePrefix(i)];
-    if(p>=1000)
-        buffer[at++] = ((p/1000)%10)+'0';
-    if(p>=100)
-        buffer[at++] = ((p/100)%10)+'0';
-    if(p>=10)
-        buffer[at++] = ((p/10)%10)+'0';
-    buffer[at++] = '.';
-    buffer[at++] = (p%10)+'0';
-    buffer[at++] = 0;
-
-    return buffer;
-}
-
-Editor::Editor(int x, int y, int w, int h) 
+Editor::Editor(int x, int y, int w, int h)
   : holder(x, y, w, h)
-  //, menu_bar(x, y, w, 24)
-  , editor(x, y, w, h)
   , adler(adler32(0L, nullptr, 0)){
 
-    editor.buffer(CreateTextBuffer());
-    editor.textfont(FL_SCREEN);
-
-#if ( defined(FL_ABI_VERSION) ) &&  ( FL_ABI_VERSION >= 10304 )
-    editor.linenumber_width(64);
-#endif
-
-    holder.resizable(editor);
-    holder.end();
 }
 
-Editor::Editor(const Editor &that)
-  : holder(that.holder.x(), that.holder.y(), that.holder.w(), that.holder.h())
-  //, menu_bar(that.holder.x(), that.holder.y(), that.holder.w(), 24)
-  , editor(that.holder.x(), that.holder.y(), that.holder.w(), that.holder.h())
-  , adler(adler32(0L, nullptr, 0))
-  , path_(that.path_){
+// Editor filetype registry.
+struct filetype{
+    char extension[0x10];
+    Editor::EditorFactory factory;
+} default_editor;
 
-    editor.buffer(CreateTextBuffer());
-    editor.textfont(FL_SCREEN);
-
-#if ( defined(FL_ABI_VERSION) ) &&  ( FL_ABI_VERSION >= 10304 )
-    editor.linenumber_width(64);
-#endif
-
-    holder.resizable(editor);
-
-    //menu_bar.menu(prepareMenu());
-
-    const char *text = that.editor.buffer()->text();
-    editor.buffer()->text(text);        
-    adler = adler32(adler, (unsigned char *)text, strlen(text));
-    free((void *)text);
-    holder.end();
+static inline bool ConstructFiletype(const char * const c, const unsigned l, const Editor::EditorFactory f, struct filetype &t){
+    t.factory = f;
+    // Since 0xF is contiguous set bits, a bitwise and will perform a min operation.
+    const unsigned n = l&0xF;
+    memcpy(t.extension, c, n);
+    t.extension[n] = 0;
+    return n==l;
 }
 
-Editor::~Editor(){
-    //free((void *)menu_bar.menu());
-    //menu_bar.menu(nullptr);
+static inline bool ConstructFiletype(const std::string &extension, const Editor::EditorFactory factory, struct filetype &new_filetype){
+    return ConstructFiletype(extension.c_str(), extension.size(), factory, new_filetype);
 }
 
-// Basically dump what we know.
-void Editor::info() const {
-    char buffer[8];
-    unsigned long long s = editor.buffer()->length();
-    fl_alert("Editor information:\npath: %s\nFilesize: %s %cB\nAdler32 Checksum: %i\n", 
-        path().c_str(), sizeNumberString(buffer, s), sizePrefixChar(s), adler);
-}
+static std::deque<struct filetype> filetypes;
 
-bool Editor::load(){
+bool Editor::RegisterFiletype(const std::string &extension, Editor::EditorFactory factory){
 
-    FILE *that = fopen(path_.c_str(), "r");
-    if(!that){
-        fl_alert("Cannot open file %s", path_.c_str());
-        return false;
-    }
-    // Buffer the file in.
-    char buffer[0x100];
-    unsigned to = 0;
+    const char *ext = extension.c_str();
+    unsigned len = extension.size();
 
-    adler = adler32(0L, nullptr, 0);
-
-    // Clear the buffer
-    editor.buffer()->text(nullptr);
-    // Load the file.
-    do{
-        to = fread(buffer, 1, 0xFF, that);
-
-        adler = adler32(adler, (unsigned char *)buffer, to);
-
-        buffer[to] = 0;
-        editor.buffer()->append(buffer);
-    }while(to==0xFF);
-
-    fclose(that);
-
-    return true;
-}
-
-bool Editor::save(){
-
-    char buffer[0x100];
-
-    unsigned to = 0;
-
-    // Check if the file contents are what we saw when we last loaded/saved the file.
-    uLong adler_file = adler32(0L, nullptr, 0);
-
-    FILE *that = fopen(path_.c_str(), "r");
-    // Load the file.
-    do{
-        to = fread(buffer, 1, 0xFF, that);
-
-        adler_file = adler32(adler_file, (unsigned char *)buffer, to);
-    }while(to==0xFF);
-
-    fclose(that);
-
-    if(adler_file!=adler){
-        if(!fl_choice("File %s was changed outside of the editor. Would you like to save anyway?", 
-            fl_cancel, fl_yes, nullptr, path_.c_str()))
-            return false;
+    if(ext[0]=='.'){
+        ext++;
+        len--;
     }
 
-    // Create a backup of the original file, just in case :)
-    const std::string new_file_name = path_+".baku";
-    rename(path_.c_str(), new_file_name.c_str());
-
-    that = fopen(path_.c_str(), "w");
-    if(that){
-
-        const char *text = editor.buffer()->text();
-        const unsigned length = strlen(text);
-        // Try to write the file.
-        if(fwrite(text, 1, length, that)!=length){
-            fl_alert("Could not save file %s.", path_.c_str());
-            return false;
+    for(std::deque<struct filetype>::iterator i = filetypes.begin(); i!=filetypes.end(); i++)
+        if(i->extension==ext){
+            i->factory = factory;
+            return true;
         }
-
-        fclose(that);
-        // If we succeeded, we don't need the backup any more.
-        remove(new_file_name.c_str());
-
-        // Calculate the new checksum and free the buffer.
-        adler = adler32(adler32(0L, nullptr, 0), (unsigned char *)text, strlen(text));
-
-        free((void *)text);
+    struct filetype new_filetype;
+    if(ConstructFiletype(ext, factory, new_filetype)){
+        filetypes.push_back(new_filetype);
+        return true;
     }
-    else{ // Alert if we couldn't open the file for saving.
-        fl_alert("Could open file %s for saving.", path_.c_str());
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
-void Editor::infoCallback(Fl_Widget *w, void *a){
-    Editor *ed = static_cast<Editor *>(a);
-    ed->info();
+bool Editor::RegisterDefaultEditor(EditorFactory factory){
+    return default_editor.factory = factory;
 }
 
-void Editor::saveCallback(Fl_Widget *w, void *a){
-    Editor *ed = static_cast<Editor *>(a);
-    ed->save();
+Editor::EditorFactory Editor::GetDefaultEditor(){
+    return default_editor.factory;
 }
 
-void Editor::saveAsCallback(Fl_Widget *w, void *a){
-    Editor *ed = static_cast<Editor *>(a);
-    const char *file_name = fl_input("Choose a file", ed->path().c_str());
-    if(file_name){
-        ed->path(file_name);
-        ed->save();
-    }
+bool Editor::RestoreDefaultEditor(){
+    return default_editor.factory = TextEditor::CreateTextEditor;
 }
 
-void Editor::loadCallback(Fl_Widget *w, void *a){
-    Editor *ed = static_cast<Editor *>(a);
-    
-    if(!ed->path().empty()){
-        switch(fl_choice("Save changes to file %s?", fl_no, fl_yes, fl_cancel, ed->path().c_str())){
-            case 0:
-            break;
-            case 1:
-            ed->save();
-            break;
-            case 2:
-            return;
-        }
+Editor::EditorFactory Editor::GetEditorForExtension(const std::string &extension){
+    const char *ext = extension.c_str();
+    unsigned len = extension.size();
+
+    if(ext[0]=='.'){
+        ext++;
+        len--;
     }
 
-    const char *file_name = fl_input("Choose a file", nullptr);
-    if(file_name){
-        ed->path(file_name);
-        ed->load();
-    }
-}
-
-
-#define MENU_SIZE 9
-#define MENU_DUMMY (void *)0xDEAD
-
-static const Fl_Menu_Item menu_[MENU_SIZE] = {
-    {"File", 0, 0, 0, FL_SUBMENU},
-        {"Open", FL_COMMAND+'o', Editor::loadCallback, MENU_DUMMY},
-        {"Save", FL_COMMAND+'s', Editor::saveCallback, MENU_DUMMY},
-        {"Save As", FL_COMMAND+FL_SHIFT+'s', Editor::saveAsCallback, MENU_DUMMY},
-    {0},
-        {"Edit", 0, 0, 0, FL_SUBMENU},
-        {"Properties", FL_COMMAND+'?', Editor::infoCallback, MENU_DUMMY},
-    {0},
-{0}
-};
-
-Fl_Menu_Item *Editor::menu(){
-    Fl_Menu_Item *that = (Fl_Menu_Item *)malloc(sizeof(Fl_Menu_Item)*MENU_SIZE);
-    memcpy(that, menu_, sizeof(menu_));
-    return that;
-}
-
-const Fl_Menu_Item *Editor::prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a), void *arg_) const{
-    Fl_Menu_Item *m = menu();
-    for(int i = 0; i<MENU_SIZE; i++){
-        if(m[i].user_data()==MENU_DUMMY)
-            m[i].user_data((void *)this);
-    }
-
-    m[1].callback(OpenCallback_);
-    m[1].user_data(arg_);
-    return m;
+    for(std::deque<struct filetype>::iterator i = filetypes.begin(); i!=filetypes.end(); i++)
+        if(i->extension==ext)
+            return i->factory;
+    return default_editor.factory;
 }
 
 } // namespace Flare
