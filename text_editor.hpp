@@ -1,13 +1,13 @@
 #pragma once
 #include "editor.hpp"
 
-#include <FL/Fl_Text_Editor.H>
+#include "flare_text_editor_widget.hpp"
 
 namespace Flare {
 
 class TextEditor : public Editor {
 
-    Fl_Text_Editor editor;
+    Text_Editor_Widget editor;
 
     static Fl_Menu_Item *menu();
 

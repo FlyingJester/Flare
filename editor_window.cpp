@@ -40,7 +40,7 @@ public:
     int handle(int e) override {
         if((e==FL_PUSH) && (Fl::event_button()==FL_RIGHT_MOUSE)){
             Fl_Menu_Item rclick_menu[] = {
-                { "Info...", 0, InfoCallback, this},
+                { "Properties", 0, InfoCallback, this, FL_MENU_DIVIDER},
                 { "Reload", 0, ReloadCallback, this},
                 { "Close",  0, CloseCallback, this},
                 { 0 }

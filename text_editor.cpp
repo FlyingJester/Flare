@@ -30,9 +30,7 @@ TextEditor::TextEditor(int x, int y, int w, int h)
     editor.buffer(CreateTextBuffer());
     editor.textfont(FL_SCREEN);
 
-#if ( defined(FL_ABI_VERSION) ) &&  ( FL_ABI_VERSION >= 10304 )
-    editor.linenumber_width(64);
-#endif
+    editor.buffer()->add_modify_callback(Text_Editor_Widget::text_buffer_change_cb, &editor);
 
     holder.resizable(editor);
     holder.end();
@@ -76,6 +74,8 @@ bool TextEditor::load(){
     }while(to==0xFF);
 
     fclose(that);
+
+    editor.clearHistory();
 
     return true;
 }
