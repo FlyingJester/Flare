@@ -22,7 +22,7 @@ public:
 
     typedef Editor *(*EditorFactory)(int, int, int, int);
 
-    virtual const Fl_Menu_Item *prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a) = nullptr, void *arg_ = nullptr) const = 0;
+    virtual const Fl_Menu_Item *prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a) = nullptr, void(*FindCallback_)(Fl_Widget *, void *a) = nullptr, void *arg_ = nullptr) const = 0;
 
     Editor(int x, int y, int w, int h);
     virtual ~Editor();
@@ -35,6 +35,9 @@ public:
     virtual void path(const std::string &s) {path_ = s;}
     virtual const std::string &path() const {return path_;}
 
+
+    virtual void find(const char *) = 0;
+    
     virtual void calculateAdler32() = 0;
 
     static bool RegisterFiletype(const std::string &extension, EditorFactory factory);

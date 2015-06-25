@@ -215,6 +215,7 @@ Fl_Menu_Item *EditorWindow::emptyMenu(){
 
 EditorWindow::EditorWindow()
   : window(WIDTH, HEIGHT, "Flare Text Editor")
+  , finder(*this)
   , menu_bar(0, 0, WIDTH, MENU_HEIGHT)
   , left_button(0, MENU_HEIGHT, BUTTON_HEIGHT, BUTTON_HEIGHT, "<")
   , right_button(WIDTH-BUTTON_WIDTH, MENU_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT, ">")

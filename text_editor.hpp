@@ -12,7 +12,7 @@ class TextEditor : public Editor {
     static Fl_Menu_Item *menu();
 
 public:
-    const Fl_Menu_Item *prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a) = nullptr, void *arg_ = nullptr) const override;
+    const Fl_Menu_Item *prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a) = nullptr, void(*FindCallback_)(Fl_Widget *, void *a) = nullptr, void *arg_ = nullptr) const override;
 
     TextEditor(int x, int y, int w, int h);
     virtual ~TextEditor();
@@ -20,6 +20,8 @@ public:
     void info() const override;
     bool save() override;
     bool load() override;
+
+    void find(const char *) override;
 
     static void infoCallback(Fl_Widget *w, void *a);
     static void saveCallback(Fl_Widget *w, void *a);

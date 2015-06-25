@@ -1,7 +1,7 @@
 
 flare_files = ["editor.cpp", "text_editor.cpp", "editor_window.cpp", # Main UI files
     "size_utilities.cpp", # Utilities
-    "flare_text_editor_widget.cpp"] # Widgets
+    "flare_text_editor_widget.cpp", "find.cpp"] # Widgets
 
 flare_libs = ["fltk", "z"]
 

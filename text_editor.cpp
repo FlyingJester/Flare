@@ -15,6 +15,7 @@
 #include <zlib.h>
 
 #include <string>
+#include <cstring>
 #include <cstdio>
 #include <cassert>
 
@@ -137,6 +138,22 @@ bool TextEditor::save(){
     return true;
 }
 
+void TextEditor::find(const char *text){
+    const unsigned len = strlen(text);
+    int cur_pos = editor.insert_position()+1, to = cur_pos+1;
+    while(editor.buffer()->findchar_forward(cur_pos, text[0], &to) && (to+len<editor.buffer()->length())){
+        if(memcmp(editor.buffer()->address(to), text, len)==0){
+            editor.buffer()->highlight(to, to+len);
+            editor.insert_position(to);
+            editor.show_insert_position();
+            editor.redraw();
+            return;
+        }
+        cur_pos = to+1;
+    }
+    fl_alert("Could not find text:\n%s", text);
+}
+
 void TextEditor::calculateAdler32(){
     const char *text = editor.buffer()->text();
    
@@ -188,7 +205,7 @@ void TextEditor::loadCallback(Fl_Widget *w, void *a){
 }
 
 
-#define MENU_SIZE 9
+#define MENU_SIZE 10
 #define MENU_DUMMY (void *)0xDEAD
 
 static const Fl_Menu_Item menu_[MENU_SIZE] = {
@@ -198,7 +215,8 @@ static const Fl_Menu_Item menu_[MENU_SIZE] = {
         {"Save As", FL_COMMAND+FL_SHIFT+'s', TextEditor::saveAsCallback, MENU_DUMMY},
     {0},
         {"Edit", 0, 0, 0, FL_SUBMENU},
-        {"Properties", FL_COMMAND+'?', TextEditor::infoCallback, MENU_DUMMY},
+        {"Properties", FL_COMMAND+'h', TextEditor::infoCallback, MENU_DUMMY},
+        {"Find", FL_COMMAND+'f', 0, MENU_DUMMY},
     {0},
 {0}
 };
@@ -209,7 +227,7 @@ Fl_Menu_Item *TextEditor::menu(){
     return that;
 }
 
-const Fl_Menu_Item *TextEditor::prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a), void *arg_) const{
+const Fl_Menu_Item *TextEditor::prepareMenu(void(*OpenCallback_)(Fl_Widget *, void *a), void(*FindCallback_)(Fl_Widget *, void *a), void *arg_) const{
     Fl_Menu_Item *m = menu();
     for(int i = 0; i<MENU_SIZE; i++){
         if(m[i].user_data()==MENU_DUMMY)
@@ -218,6 +236,8 @@ const Fl_Menu_Item *TextEditor::prepareMenu(void(*OpenCallback_)(Fl_Widget *, vo
 
     m[1].callback(OpenCallback_);
     m[1].user_data(arg_);
+    m[7].callback(FindCallback_);
+    m[7].user_data(arg_);
     return m;
 }
 

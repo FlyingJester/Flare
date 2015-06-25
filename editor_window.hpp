@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor.hpp"
+#include "find.hpp"
 
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Scroll.H>
@@ -18,7 +19,13 @@ namespace Flare {
 class EditorWindow {
 public:
     static void OpenCallback(Fl_Widget *w, void *a);
+    static void FindCallback(Fl_Widget *w, void *a){
+        static_cast<EditorWindow *>(a)->finder.show();
+    }
 private:
+    
+    Find finder;
+    
     std::vector<std::unique_ptr<Editor> > editors;
     
     Fl_Window window;
@@ -44,7 +51,7 @@ private:
         if(i>=children()) return;
         void *o = (void *)menu_bar.menu();
         menu_bar.menu(
-            editors[i]->prepareMenu(OpenCallback, this)
+            editors[i]->prepareMenu(OpenCallback, FindCallback, this)
         );
         free(o);
         tab_bar.child(i)->box(FL_GLEAM_DOWN_BOX);
@@ -107,7 +114,9 @@ public:
         show(i);
         which_ = i;
     }
-
+    
+    inline void find(const char * text){ editors[which()]->find(text); }
+    
     inline bool empty() const { return editors.empty(); }
     inline unsigned children() const { return editors.size(); }
     inline Fl_Widget *child(unsigned i) { return holder.child(i); }
