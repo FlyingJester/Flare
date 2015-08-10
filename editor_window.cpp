@@ -9,6 +9,25 @@
 
 namespace Flare {
 
+int EditorWindow::TabScroll::handle(int e){
+    
+    if(e==FL_MOUSEWHEEL){
+    
+        if(Fl::event_dx()>0)
+            window->scrollFullyRight();
+        else if(Fl::event_dx()<0)
+            window->scrollFullyLeft();
+        else if(Fl::event_dy()>0)
+            window->scrollRight(Fl::event_dy()<<3);
+        else if(Fl::event_dy()<0)
+            window->scrollLeft(-(Fl::event_dy()<<3));
+
+        return 1;
+    }
+    
+    return Fl_Scroll::handle(e);
+}
+
 class TabButton : public Fl_Button {
     static void ReloadCallback(Fl_Widget *w, void *a){
         Fl_Button *button = static_cast<Fl_Button *>(a);
@@ -70,23 +89,32 @@ void EditorWindow::timer_callback(void *a){
         return;
     }
     
-    const long to = window->scroll.xposition()+window->movement_direction;
-    long last_x_plus_w = 0;
+    window->TryEditorWindowScroll(window->movement_direction);
     
-    for(int i = 0; i<window->scroll.children(); i++){
-        const Fl_Widget * const c = window->scroll.child(i);
-        const long l = c->w() + c->x();
-        
-        if(l > last_x_plus_w)
-            last_x_plus_w = l;
-    }
-
-    if((to>=0) && (to + window->scroll.w() + window->scroll.h() <=last_x_plus_w)){
-        window->scroll.scroll_to(
-            to, 
-            window->scroll.yposition());
-    }
     Fl::add_timeout(ScrollRate(), EditorWindow::timer_callback, a);
+}
+
+void EditorWindow::scrollFullyLeft(){
+    TryEditorWindowScroll(0);
+}
+
+void EditorWindow::scrollFullyRight(){
+    TryEditorWindowScroll(EditorMaxScroll());
+}
+
+void EditorWindow::scrollLeft(int ticks){
+
+    if(ticks>=scroll.xposition())
+        scrollFullyLeft();
+    else for(int i = 0; i<ticks; i++)
+            TryEditorWindowScroll(-1);
+}
+
+void EditorWindow::scrollRight(int ticks){
+    if(ticks + scroll.xposition()>=EditorMaxScroll())
+        scrollFullyRight();
+    else for(int i = 0; i<ticks; i++)
+            TryEditorWindowScroll(1);
 }
 
 template<int D>
@@ -235,7 +263,9 @@ EditorWindow::EditorWindow()
   , tab_bar(BUTTON_HEIGHT, MENU_HEIGHT, 0, BUTTON_HEIGHT)
   , holder(0, BUTTON_HEIGHT+MENU_HEIGHT, WIDTH, HEIGHT-(BUTTON_HEIGHT+MENU_HEIGHT))
   , resizer(BUTTON_WIDTH<<1, (BUTTON_HEIGHT<<1)+MENU_HEIGHT, WIDTH-(BUTTON_WIDTH<<3), HEIGHT-(BUTTON_HEIGHT<<2)){
-
+    
+    scroll.window = this;
+    
     window.add(holder);
     window.add(resizer);
     window.resizable(resizer);

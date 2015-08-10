@@ -24,6 +24,16 @@ public:
     }
 private:
     
+    class TabScroll : public Fl_Scroll {
+    public:
+        TabScroll(int ax, int ay, int aw, int ah, const char *acaption = nullptr)
+          : Fl_Scroll(ax, ay, aw, ah, acaption){}
+        int handle(int e) override;
+        
+        EditorWindow *window;
+        
+    };
+    
     Find finder;
     
     std::vector<std::unique_ptr<Editor> > editors;
@@ -31,7 +41,7 @@ private:
     Fl_Window window;
     Fl_Menu_Bar menu_bar;
     Fl_Button left_button, right_button;
-    Fl_Scroll scroll;
+    TabScroll scroll;
     Fl_Pack tab_bar;
     Fl_Group holder;
     Fl_Box resizer;
@@ -39,6 +49,11 @@ private:
     bool scroll_again;
     unsigned movement_direction; // -1 is left, 1 is right
     static void timer_callback(void *a);
+    
+    void scrollFullyLeft();
+    void scrollFullyRight();
+    void scrollLeft(int ticks = 1);
+    void scrollRight(int ticks = 1);
     
     unsigned which_;
     
@@ -84,10 +99,42 @@ private:
         editors.erase(editors.begin()+i);
         return true;
     }
+    
+    inline long EditorMaxScroll(){
+    
+        long last_x_plus_w = 0;
+        
+        for(int i = 0; i<scroll.children(); i++){
+            const Fl_Widget * const c = scroll.child(i);
+            const long l = c->w() + c->x();
+            
+            if(l > last_x_plus_w)
+                last_x_plus_w = l;
+        }
+        return last_x_plus_w;
+    }
 
+    inline void TryEditorWindowScroll(int DX){
+        
+        if(scroll.children()==0) 
+            return;
+        const long to = scroll.xposition()+DX,
+            n_w = window.w() - 32;
+            
+        if(
+                ((to >= 0) && DX<0)
+                ||
+                ((n_w < EditorMaxScroll()) && DX>0)
+        ){
+            scroll.scroll_to(
+                to, 
+                scroll.yposition());
+        }
+    }
 public:
     
     friend class TabButton;
+    friend class TabScroll;
     
     EditorWindow();
     ~EditorWindow(){
