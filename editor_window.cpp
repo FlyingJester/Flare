@@ -70,10 +70,22 @@ void EditorWindow::timer_callback(void *a){
         return;
     }
     
-    window->scroll.scroll_to(
-        window->scroll.xposition()+window->movement_direction, 
-        window->scroll.yposition());
+    const long to = window->scroll.xposition()+window->movement_direction;
+    long last_x_plus_w = 0;
     
+    for(int i = 0; i<window->scroll.children(); i++){
+        const Fl_Widget * const c = window->scroll.child(i);
+        const long l = c->w() + c->x();
+        
+        if(l > last_x_plus_w)
+            last_x_plus_w = l;
+    }
+
+    if((to>=0) && (to + window->scroll.w() + window->scroll.h() <=last_x_plus_w)){
+        window->scroll.scroll_to(
+            to, 
+            window->scroll.yposition());
+    }
     Fl::add_timeout(ScrollRate(), EditorWindow::timer_callback, a);
 }
 
