@@ -1,6 +1,7 @@
 #pragma once
 
 #include <FL/Fl_Text_Editor.H>
+#include <cstring>
 #include "history_tracker.hpp"
 
 namespace Flare {

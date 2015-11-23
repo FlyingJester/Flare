@@ -1,6 +1,6 @@
 #include "flare_text_editor_widget.hpp"
 
-#include <FL/fl_ask.h>
+#include <FL/fl_ask.H>
 #include <FL/Fl.H>
 
 namespace Flare {
