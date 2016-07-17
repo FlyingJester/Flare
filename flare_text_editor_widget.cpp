@@ -103,24 +103,78 @@ namespace Flare {
         canary--;
     }
 
+    void Text_Editor_Widget::removeTabChars(int index){
+        const int start_of_line = line_start(index);
+        // If the start of the line is the same as the tab character, remove it.
+        bool starts_with_tab = true;
+        for(size_t i = 0; i < tab.length(); i++){
+            if(tab[i] != mBuffer->char_at(start_of_line + i)){
+                starts_with_tab = false;
+                break;
+            }
+        }
+        if(starts_with_tab){
+            mBuffer->remove(start_of_line, start_of_line + tab.length());
+        }
+        // Otherwise, if the tab char is an actual tab, as many spaces as possible
+        // up to 4 from the start of the line.
+        else if(tab.length() == 1 && tab[0] == '\t'){
+            int num_spaces = 0;
+            for(size_t i = 0; i < 4; i++){
+                if(mBuffer->char_at(start_of_line + i) == ' '){
+                    num_spaces++;
+                }
+                else
+                    break;
+            }
+            if(num_spaces)
+                mBuffer->remove(start_of_line, start_of_line + num_spaces);
+        }
+        // Finally, if none of that worked, if the line starts with a space or a tab, remove it.
+        else{
+            const char c = mBuffer->char_at(start_of_line);
+            if(c == ' ' || c == '\t'){
+                mBuffer->remove(start_of_line, 1);
+            }
+        }
+    }
+
     int Text_Editor_Widget::handle(int e){
         if(e==FL_KEYDOWN){
-            if(Fl::event_length()!=1) return Fl_Text_Editor::handle(e);
-            const char first_char = Fl::event_text()[0];
+            int event_len = Fl::event_length();
+            const char *event_str = Fl::event_text();
+            const bool shift_is_pressed = Fl::event_state() & FL_SHIFT;
+
+            if(event_len == 0 && Fl::get_key(FL_Tab)){
+                event_str = "\t";
+                event_len = 1;
+            }
+
+            printf("Event Length: %i  \tShift: %i\n", event_len, shift_is_pressed);
+            if(event_len!=1) return Fl_Text_Editor::handle(e);
+            const char first_char = *event_str;
             if(first_char=='\t'){
                 const Fl_Text_Selection * const selection = mBuffer->primary_selection();
                 if(!selection->selected()){
-                    insert(tab.c_str());
+                    if(shift_is_pressed){
+                        removeTabChars(insert_position());
+                    }
+                    else{
+                        // If there are no lines selected and shift isn't pressed, just insert
+                        // the defined tab character(s).
+                        insert(tab.c_str());
+                    }
                 }
                 else{
                     int line_start_pos = line_start(selection->start());
                     
                     while(line_start_pos<selection->end()){
-                        if(Fl::event_shift()!=0){
-                            // TODO: Add ability to remove multiple tabs.
-                        }
+
+                        if(shift_is_pressed)
+                            removeTabChars(line_start_pos);
                         else
                             mBuffer->insert(line_start_pos, tab.c_str());
+
                         line_start_pos = line_end(line_start_pos, true);
                         
                         while((mBuffer->char_at(line_start_pos)=='\n') || (mBuffer->char_at(line_start_pos+1)=='\n')){

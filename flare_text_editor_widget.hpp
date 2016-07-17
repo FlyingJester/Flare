@@ -33,6 +33,8 @@ class Text_Editor_Widget : public Fl_Text_Editor {
 
     void removeText(long at, const char *text, unsigned long len = 0);
 
+    void removeTabChars(int index);
+
 public:
 
     Text_Editor_Widget(int X, int Y, int W, int H, const char *L = nullptr)

@@ -288,6 +288,9 @@ EditorWindow::EditorWindow()
 //    menu_bar.
 
     window.end();
+
+    
+    Fl::option(Fl::OPTION_VISIBLE_FOCUS, false);
 }
 
 } // namespace Flare
