@@ -153,8 +153,6 @@ namespace Flare {
                 event_str = "\t";
                 event_len = 1;
             }
-
-            printf("Event Length: %i  \tShift: %i\n", event_len, shift_is_pressed);
             if(event_len!=1) return Fl_Text_Editor::handle(e);
             const char first_char = *event_str;
             if(first_char=='\t'){
