@@ -140,6 +140,10 @@ namespace Flare {
     }
 
     int Text_Editor_Widget::handle(int e){
+        if(!has_set_font){
+            textfont(FL_COURIER);
+            has_set_font = true;
+        }
         if(e==FL_KEYDOWN){
             int event_len = Fl::event_length();
             const char *event_str = Fl::event_text();

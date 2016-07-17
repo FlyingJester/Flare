@@ -22,6 +22,7 @@ class Text_Editor_Widget : public Fl_Text_Editor {
     }
 
     unsigned canary;
+    bool has_set_font;
 
     std::string tab;
     Pluto::HistoryTracker<struct diff, delete_diff, size_diff, 0x3FFFF> history, future;
@@ -45,12 +46,12 @@ public:
             Fl_Text_Display::linenumber_width(40);
 #endif
         canary = 0u;
+        has_set_font = false;
 
         remove_key_binding('z', FL_COMMAND);
         remove_key_binding('y', FL_COMMAND);
         add_key_binding('z', FL_COMMAND, undo_key_binding);
         add_key_binding('y', FL_COMMAND, redo_key_binding);
-
     }
  
     void clearHistory(){
