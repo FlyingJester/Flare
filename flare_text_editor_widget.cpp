@@ -149,7 +149,7 @@ namespace Flare {
             const char *event_str = Fl::event_text();
             const bool shift_is_pressed = Fl::event_state() & FL_SHIFT;
 
-            if(event_len == 0 && Fl::get_key(FL_Tab)){
+            if(event_len == 0 && Fl::event_key() == FL_Tab){
                 event_str = "\t";
                 event_len = 1;
             }
