@@ -20,7 +20,9 @@ class EditorWindow {
 public:
     static void OpenCallback(Fl_Widget *w, void *a);
     static void FindCallback(Fl_Widget *w, void *a){
-        static_cast<EditorWindow *>(a)->finder.show();
+        EditorWindow *const window = static_cast<EditorWindow *>(a);
+        window->finder.hide();
+        window->finder.show();
     }
 private:
     
